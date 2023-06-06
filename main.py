@@ -8,32 +8,37 @@ def filter_non_printable(text):
     return ''.join([c for c in text if ord(c) > 31 or ord(c) == 9])
 
 
-def extract(*args, in_file_path="./test.pdf", out_file_path="./outText.txt"):
-    f = open(out_file_path, "w", encoding="ascii", errors="surrogateescape")
+# get rid of unprintable characters
+def filter_text(text):
+    text = filter_non_printable(text)
+    text = ascii(text)
+    return text.replace(r"\u201c", '"').replace(r"\u201d", '"').replace(r"\u2212", "-") \
+        .replace(r"\u2019", "'").replace("SDLROW", ' ')
+
+
+def extract(start_page=0, end_page=0, in_file_path="../Savage_Worlds_Adventure_Edition.pdf",
+            out_file_path="./outText.txt"):
+    f = open(out_file_path, "w", encoding="ascii", errors="surrogate-escape")
     with pdfplumber.open(in_file_path) as pdf:
-        # iterate over requested pages
-        index = 0
-        length = len(args)
-        while index < length:
-            # pdf page numbers start at 1
-            start_page = args[index] - 1
-            index += 1
-            if index < length:
-                end_page = args[index] + 1
-                index += 1
-            else:
-                end_page = start_page + 1
+        # page numbers are 0 based
+        start_page -= 1
+        end_page -= 1
+        if start_page < 0:
+            start_page = 0
+        if start_page > end_page:
+            end_page = start_page
+        if start_page == end_page:
+            text = pdf.pages[start_page].extract_text()
+            text = filter_text(text)
+            f.write(text)
+        else:
             current_page = start_page
-            while current_page < end_page:
+            while current_page <= end_page:
                 text = pdf.pages[current_page].extract_text()
                 current_page += 1
-                text = filter_non_printable(text)
-                print(text)
-                # get rid of unprintable characters
-                text = text.encode(encoding="ascii", errors="replace")
-                text = text.decode(encoding="utf-8", errors='replace')
+                text = filter_text(text)
                 f.write(text)
-        f.close()
+    f.close()
 
 
 if __name__ == '__main__':
@@ -42,8 +47,4 @@ if __name__ == '__main__':
 
     n = len(sys.argv)
     print("Total arguments passed: ", n)
-    # arg[0] start page
-    # arg[1] end page
-    # arg[2] in file path
-    # arg[3] out file path
-    extract(20, 28, in_file_path="demo.pdf")
+    extract(20, 20, in_file_path="../Savage_Worlds_Adventure_Edition.pdf")
